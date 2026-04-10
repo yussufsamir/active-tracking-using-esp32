@@ -14,7 +14,7 @@ ROOMS = {
 }
 
 IGNORE_PREFIXES = [
-    "8C:0D:76",  # router/AP
+    "",  # router/AP
 ]
 
 KNOWN_DEVICES_FILE = Path.home() / "known_devices.json"
