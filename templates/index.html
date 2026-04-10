@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Live Indoor Tracking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+
+    header {
+      padding: 15px 20px;
+      background: #111827;
+      border-bottom: 1px solid #374151;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .map {
+      display: flex;
+      gap: 20px;
+      padding: 20px;
+      height: calc(100vh - 80px);
+    }
+
+    .room {
+      flex: 1;
+      background: #1f2937;
+      border-radius: 16px;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .room h2 {
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .devices {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    .device {
+      background: #111827;
+      border-radius: 10px;
+      padding: 10px;
+      border: 1px solid #4b5563;
+      transition: all 0.3s ease;
+    }
+
+    .device.fade {
+      opacity: 0.45;
+    }
+
+    .name {
+      font-size: 15px;
+      font-weight: bold;
+      color: #f8fafc;
+    }
+
+    .mac {
+      font-size: 12px;
+      font-weight: bold;
+      word-break: break-all;
+      color: #93c5fd;
+      margin-top: 4px;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: #cbd5e1;
+      margin-top: 5px;
+    }
+
+    .empty {
+      color: #6b7280;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>Live Indoor Tracking Map</h1>
+</header>
+
+<div class="map" id="map"></div>
+
+<script>
+const rooms = {
+  living_room: "Living Room",
+  bedroom: "Bedroom",
+  joes_room: "Joe's Room"
+};
+
+function render(devices) {
+  const map = document.getElementById("map");
+  map.innerHTML = "";
+
+  const grouped = {
+    living_room: [],
+    bedroom: [],
+    joes_room: []
+  };
+
+  devices.forEach(d => {
+    if (grouped[d.current_room_key]) {
+      grouped[d.current_room_key].push(d);
+    }
+  });
+
+  Object.keys(rooms).forEach(roomKey => {
+    const roomDiv = document.createElement("div");
+    roomDiv.className = "room";
+
+    const title = document.createElement("h2");
+    title.textContent = rooms[roomKey];
+    roomDiv.appendChild(title);
+
+    const list = document.createElement("div");
+    list.className = "devices";
+
+    if (grouped[roomKey].length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No registered devices";
+      list.appendChild(empty);
+    } else {
+      grouped[roomKey].forEach(d => {
+        const card = document.createElement("div");
+        card.className = d.best_rssi === null ? "device fade" : "device";
+
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = d.name || "Unknown";
+
+        const mac = document.createElement("div");
+        mac.className = "mac";
+        mac.textContent = d.mac;
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+
+        if (d.best_rssi !== null) {
+          meta.innerHTML = `
+            RSSI: ${d.best_rssi}<br>
+            Live
+          `;
+        } else {
+          meta.innerHTML = `
+            Last seen recently<br>
+            (device still assumed in room)
+          `;
+        }
+
+        card.appendChild(name);
+        card.appendChild(mac);
+        card.appendChild(meta);
+        list.appendChild(card);
+      });
+    }
+
+    roomDiv.appendChild(list);
+    map.appendChild(roomDiv);
+  });
+}
+
+async function update() {
+  try {
+    const res = await fetch("/devices");
+    const data = await res.json();
+    render(data);
+  } catch (err) {
+    console.log("Fetch error", err);
+  }
+}
+
+setInterval(update, 1000);
+update();
+</script>
+
+</body>
+</html>
